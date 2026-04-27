@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Mario ROM Hacks Hub | fanterOS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #e52525 0%, #8b0000 100%);
+            font-family: 'DM Sans', system-ui, sans-serif;
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            position: relative;
+        }
+        /* Super Mushroom pattern overlay */
+        body::before {
+            content: '🍄';
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            font-size: 100px;
+            opacity: 0.08;
+            pointer-events: none;
+        }
+
+        .game-selection {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(229, 37, 37, 0.96), rgba(139, 0, 0, 0.96));
+            z-index: 20000;
+            overflow-y: auto;
+            padding: 2rem 1.5rem;
+            transition: opacity 0.3s ease;
+        }
+        .game-selection.hide { opacity: 0; pointer-events: none; }
+
+        .header { text-align: center; margin-bottom: 2rem; }
+        .header h1 {
+            font-size: 2.8rem;
+            background: linear-gradient(135deg, #fff, #ffde00, #fff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .header p { color: #ffde00; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .badge-row { display: flex; justify-content: center; gap: 0.8rem; margin-top: 0.8rem; flex-wrap: wrap; }
+        .badge {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 40px;
+            padding: 4px 14px;
+            font-size: 0.7rem;
+            color: #ffde00;
+            font-weight: bold;
+            backdrop-filter: blur(4px);
+        }
+
+        .toolbar { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; margin-bottom: 2rem; align-items: center; }
+        .search-box {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 222, 0, 0.5);
+            border-radius: 60px;
+            padding: 0.5rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+        }
+        .search-box:focus-within { border-color: #ffde00; box-shadow: 0 0 15px rgba(255, 222, 0, 0.4); }
+        #searchInput {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 0.9rem;
+            width: 260px;
+            outline: none;
+        }
+        #searchInput::placeholder { color: #ffccaa; }
+        .stats-badge {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            color: #ffde00;
+            font-weight: bold;
+            backdrop-filter: blur(4px);
+        }
+        .stats-badge span { color: white; }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .game-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: linear-gradient(115deg, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.3));
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 222, 0, 0.5);
+            border-radius: 24px;
+            padding: 0.9rem 1.2rem;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .game-card:hover {
+            transform: translateY(-4px);
+            border-color: #ffde00;
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .game-icon { font-size: 2rem; min-width: 52px; }
+        .game-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #ffde00;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .game-badge {
+            background: rgba(0, 0, 0, 0.5);
+            font-size: 0.6rem;
+            padding: 2px 8px;
+            border-radius: 20px;
+            color: #ffde00;
+            margin-left: 6px;
+        }
+        .game-folder {
+            font-size: 0.65rem;
+            color: #ffccaa;
+            margin-top: 4px;
+        }
+
+        .no-results { text-align: center; grid-column: 1 / -1; padding: 3rem; background: rgba(0,0,0,0.2); border-radius: 48px; color: #ffde00; }
+        .footer { text-align: center; margin-top: 3rem; font-size: 0.7rem; color: #ffde00; opacity: 0.8; }
+
+        .fullscreen-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            z-index: 10000;
+            flex-direction: column;
+        }
+        .fullscreen-modal.active { display: flex; }
+        .fullscreen-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid #ffde00;
+        }
+        .fullscreen-title { color: #ffde00; font-weight: bold; }
+        .fullscreen-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+        }
+        .fullscreen-close:hover { color: #ffde00; transform: scale(1.1); }
+        .fullscreen-content { flex: 1; display: flex; justify-content: center; align-items: center; background: #000; }
+        #fullscreenEmulator { width: 100%; height: 100%; }
+
+        .letter-jump { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-bottom: 1.5rem; }
+        .letter-btn {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #ffde00;
+            border-radius: 8px;
+            padding: 0.3rem 0.7rem;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #ffde00;
+            cursor: pointer;
+        }
+        .letter-btn:hover { background: #ffde00; color: #8b0000; }
+        .letter-btn.active { background: #ffde00; color: #8b0000; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 640px) {
+            body { padding: 1rem; }
+            .games-grid { grid-template-columns: 1fr; }
+            .search-box #searchInput { width: 160px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-selection" id="gameSelection">
+    <div class="header">
+        <h1>🍄 MARIO ROM HACKS 🍄</h1>
+        <p>Super Mario World, Super Mario Bros, Super Mario 64, and more — all the ROM hacks in one place!</p>
+        <div class="badge-row">
+            <div class="badge">🎮 SMW Hacks</div>
+            <div class="badge">⭐ SMB Hacks</div>
+            <div class="badge">🌟 SM64 Hacks</div>
+            <div class="badge">💾 Save States</div>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <span>🔍</span>
+            <input type="text" id="searchInput" placeholder="search Mario hacks...">
+        </div>
+        <div class="stats-badge">
+            📚 <span id="totalCount">0</span> Mario hacks
+        </div>
+    </div>
+
+    <div class="letter-jump" id="letterJump"></div>
+    <div id="gamesContainer" class="games-grid"></div>
+
+    <div class="footer">
+        <span>🍄 It's-a me, ROM Hacks! 🍄</span>
+    </div>
+</div>
+
+<div id="fullscreenModal" class="fullscreen-modal">
+    <div class="fullscreen-header">
+        <span class="fullscreen-title" id="fullscreenGameTitle">Mario ROM Hack</span>
+        <button class="fullscreen-close" id="fullscreenCloseBtn">✕</button>
+    </div>
+    <div class="fullscreen-content">
+        <div id="fullscreenEmulator"></div>
+    </div>
+</div>
+
+<script>
+    const FOLDER_ID = '1XtkX5KV-CCZd6oHlcsXBZf8i9GFbUBpu';
+    const API_KEY = 'AIzaSyAL1l3O7Jr8M635xZsxT3jI9yE-yp13KTc';
+    
+    let romLibrary = [];
+    let currentLetter = 'all';
+    let searchTerm = '';
+    
+    // ============ RECURSIVE FOLDER SCANNER ============
+    async function fetchAllGamesRecursively(folderId, folderName = 'Root') {
+        let allFiles = [];
+        
+        // First, get all subfolders in this folder
+        const foldersUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+mimeType='application/vnd.google-apps.folder'&key=${API_KEY}&fields=files(id,name)&pageSize=100`;
+        const foldersRes = await fetch(foldersUrl);
+        const foldersData = await foldersRes.json();
+        const subfolders = foldersData.files || [];
+        
+        // Get files in the current folder
+        const filesUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&key=${API_KEY}&fields=files(id,name)&pageSize=1000`;
+        const filesRes = await fetch(filesUrl);
+        const filesData = await filesRes.json();
+        
+        // Filter for game files
+        const games = (filesData.files || [])
+            .filter(f => {
+                const name = f.name.toLowerCase();
+                return name.endsWith('.zip') || name.endsWith('.gba') || name.endsWith('.gb') || name.endsWith('.gbc') || name.endsWith('.sfc');
+            })
+            .map(f => ({
+                id: f.id,
+                name: f.name.replace(/\.(zip|gba|gb|gbc|sfc)$/i, ''),
+                ext: f.name.split('.').pop().toUpperCase(),
+                folder: folderName
+            }));
+        
+        allFiles.push(...games);
+        
+        // Recursively process subfolders
+        for (const subfolder of subfolders) {
+            const subGames = await fetchAllGamesRecursively(subfolder.id, subfolder.name);
+            allFiles.push(...subGames);
+        }
+        
+        return allFiles;
+    }
+    
+    async function fetchGames() {
+        console.log('📁 Scanning Mario folder recursively...');
+        const allGames = await fetchAllGamesRecursively(FOLDER_ID, 'Mario Hacks');
+        
+        // Remove duplicates by name (keep first occurrence)
+        const uniqueGames = [];
+        const seenNames = new Set();
+        for (const game of allGames) {
+            if (!seenNames.has(game.name.toLowerCase())) {
+                seenNames.add(game.name.toLowerCase());
+                uniqueGames.push(game);
+            }
+        }
+        
+        uniqueGames.sort((a, b) => a.name.localeCompare(b.name));
+        
+        console.log(`🍄 Found ${uniqueGames.length} Mario ROM hacks!`);
+        return uniqueGames;
+    }
+    
+    async function playGame(fileId, gameName) {
+        document.getElementById('fullscreenGameTitle').textContent = gameName;
+        document.getElementById('fullscreenModal').classList.add('active');
+        document.getElementById('gameSelection').classList.add('hide');
+        
+        try {
+            const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
+            const response = await fetch(url);
+            const blob = await response.blob();
+            
+            // Detect core based on file extension
+            let core = 'snes'; // default for .sfc
+            const ext = gameName.split('.').pop().toLowerCase();
+            if (ext === 'gba') core = 'gba';
+            else if (ext === 'gb' || ext === 'gbc') core = 'gb';
+            else if (ext === 'sfc' || ext === 'smc') core = 'snes';
+            
+            launchEmulator(URL.createObjectURL(blob), gameName, core);
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to load game: ' + error.message);
+            document.getElementById('fullscreenModal').classList.remove('active');
+            document.getElementById('gameSelection').classList.remove('hide');
+        }
+    }
+    
+    function launchEmulator(romUrl, gameName, core) {
+        const emulatorDiv = document.getElementById('fullscreenEmulator');
+        emulatorDiv.innerHTML = '';
+        
+        window.EJS_player = '#fullscreenEmulator';
+        window.EJS_core = core;
+        window.EJS_gameName = gameName;
+        window.EJS_color = '#e52525';
+        window.EJS_startOnLoaded = true;
+        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+        window.EJS_gameUrl = romUrl;
+        window.EJS_buttons = { playPause: false, restart: true, mute: false, settings: true, fullscreen: true, saveState: true, loadState: true };
+        
+        const oldScript = document.querySelector('script[src*="emulatorjs"][src*="loader"]');
+        if (oldScript) oldScript.remove();
+        
+        const script = document.createElement('script');
+        script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+        document.body.appendChild(script);
+    }
+    
+    function closeEmulator() {
+        document.getElementById('fullscreenModal').classList.remove('active');
+        document.getElementById('fullscreenEmulator').innerHTML = '';
+        document.getElementById('gameSelection').classList.remove('hide');
+        if (window.EJS_emulator) {
+            try { window.EJS_emulator.destroy?.(); } catch(e) {}
+            window.EJS_emulator = null;
+        }
+    }
+    
+    function renderGames() {
+        let filtered = romLibrary;
+        
+        if (searchTerm) {
+            filtered = romLibrary.filter(g => 
+                g.name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+        
+        if (currentLetter !== 'all') {
+            filtered = filtered.filter(g => 
+                g.name.charAt(0).toUpperCase() === currentLetter
+            );
+        }
+        
+        document.getElementById('totalCount').innerText = filtered.length;
+        const container = document.getElementById('gamesContainer');
+        
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="no-results">🍄 no Mario hacks found — try a different search 🍄</div>';
+            return;
+        }
+        
+        container.innerHTML = filtered.map(game => `
+            <div class="game-card" data-id="${game.id}" data-name="${escapeHtml(game.name)}">
+                <div class="game-icon">⭐</div>
+                <div class="game-info">
+                    <div class="game-title">
+                        ${escapeHtml(game.name)}
+                        <span class="game-badge">${game.ext}</span>
+                    </div>
+                    <div class="game-folder">📁 ${escapeHtml(game.folder)}</div>
+                    <div class="arrow-hint" style="opacity:0.6; font-size:0.7rem;">▶ play now</div>
+                </div>
+            </div>
+        `).join('');
+        
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const id = card.getAttribute('data-id');
+                const name = card.getAttribute('data-name');
+                playGame(id, name);
+            });
+        });
+    }
+    
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    function buildLetterJump() {
+        const letters = ['all', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+        
+        const container = document.getElementById('letterJump');
+        container.innerHTML = letters.map(letter => `
+            <button class="letter-btn ${letter === currentLetter ? 'active' : ''}" data-letter="${letter}">${letter === 'all' ? 'ALL' : letter}</button>
+        `).join('');
+        
+        document.querySelectorAll('.letter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentLetter = btn.getAttribute('data-letter');
+                document.querySelectorAll('.letter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderGames();
+            });
+        });
+    }
+    
+    async function init() {
+        const container = document.getElementById('gamesContainer');
+        container.innerHTML = '<div class="no-results"><div style="text-align:center"><div style="width:40px;height:40px;border:3px solid rgba(255,222,0,0.2);border-top-color:#ffde00;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 15px"></div><p>Scanning Mario folders...</p><p style="font-size:12px;margin-top:8px;">🍄 Checking all subfolders for ROM hacks 🍄</p></div></div>';
+        
+        romLibrary = await fetchGames();
+        buildLetterJump();
+        renderGames();
+    }
+    
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        searchTerm = e.target.value;
+        renderGames();
+    });
+    
+    document.getElementById('fullscreenCloseBtn').addEventListener('click', closeEmulator);
+    document.getElementById('fullscreenModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('fullscreenModal')) closeEmulator();
+    });
+    
+    document.addEventListener('keydown', (e) => {
+        if (document.getElementById('fullscreenModal').classList.contains('active') && e.key === 'Escape') {
+            closeEmulator();
+        }
+    });
+    
+    init();
+</script>
+</body>
+</html>
