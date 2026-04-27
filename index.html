@@ -333,25 +333,33 @@
     }
     
     function launchEmulator(romUrl, gameName, core) {
-        const emulatorDiv = document.getElementById('fullscreenEmulator');
-        emulatorDiv.innerHTML = '';
-        
-        window.EJS_player = '#fullscreenEmulator';
-        window.EJS_core = core;
-        window.EJS_gameName = gameName;
-        window.EJS_color = '#e52525';
-        window.EJS_startOnLoaded = true;
-        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-        window.EJS_gameUrl = romUrl;
-        window.EJS_buttons = { playPause: false, restart: true, mute: false, settings: true, fullscreen: true, saveState: true, loadState: true };
-        
-        const oldScript = document.querySelector('script[src*="emulatorjs"][src*="loader"]');
-        if (oldScript) oldScript.remove();
-        
-        const script = document.createElement('script');
-        script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-        document.body.appendChild(script);
-    }
+    const emulatorDiv = document.getElementById('fullscreenEmulator');
+    emulatorDiv.innerHTML = '';
+    
+    // === FIXES ===
+    window.EJS_WebGL2 = false;           // Force WebGL1 (fixes black screen)
+    window.EJS_ignoreGamepad = true;     // Disable gamepad (fixes GamepadHandler error)
+    window.EJS_DEBUG_XX = true;          // Enable debug mode
+    window.EJS_video = 'webgl1';         // Force WebGL1 video driver
+    window.EJS_recanvas = true;          // Force canvas recreation
+    // === END FIXES ===
+    
+    window.EJS_player = '#fullscreenEmulator';
+    window.EJS_core = core;
+    window.EJS_gameName = gameName;
+    window.EJS_color = '#e52525';
+    window.EJS_startOnLoaded = true;
+    window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+    window.EJS_gameUrl = romUrl;
+    window.EJS_buttons = { playPause: false, restart: true, mute: false, settings: true, fullscreen: true, saveState: true, loadState: true };
+    
+    const oldScript = document.querySelector('script[src*="emulatorjs"][src*="loader"]');
+    if (oldScript) oldScript.remove();
+    
+    const script = document.createElement('script');
+    script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+    document.body.appendChild(script);
+}
     
     function closeEmulator() {
         document.getElementById('fullscreenModal').classList.remove('active');
